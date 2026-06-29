@@ -2,7 +2,7 @@ import { useState } from "react";
 import axios from "axios";
 import "./App.css";
 
-const API = "http://localhost:8000";
+const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:8000";
 const THRESHOLD = 0.75;
 
 // Cycled through by the "Load example" button in TryItOut.
@@ -88,7 +88,7 @@ function TryItOut() {
     setResult(null);
     setLoading(true);
     try {
-      const { data } = await axios.post(`${API}/check`, {
+      const { data } = await axios.post(`${API_BASE}/check`, {
         task_a: a,
         task_b: b,
       });
@@ -115,7 +115,7 @@ function TryItOut() {
     setDemoRan(false);
     setDemoLoading(true);
     try {
-      const { data } = await axios.get(`${API}/demo`);
+      const { data } = await axios.get(`${API_BASE}/demo`);
       const tasks = data.tasks || [];
 
       // Every unique pair (i < j) through the classifier.
@@ -129,7 +129,7 @@ function TryItOut() {
       const results = await Promise.all(
         requests.map(([a, b]) =>
           axios
-            .post(`${API}/check`, { task_a: a.name, task_b: b.name })
+            .post(`${API_BASE}/check`, { task_a: a.name, task_b: b.name })
             .then(({ data }) => ({ a, b, ...data }))
         )
       );
@@ -159,7 +159,7 @@ function TryItOut() {
       prev.map((p) => (p.id === pair.id ? { ...p, pending: true } : p))
     );
     try {
-      await axios.post(`${API}/feedback`, {
+      await axios.post(`${API_BASE}/feedback`, {
         task_a: pair.taskA,
         task_b: pair.taskB,
         label,
@@ -407,14 +407,14 @@ function ConnectBoard() {
         },
       }[platform];
 
-      const { data } = await axios.post(`${API}${config.endpoint}`, config.body);
+      const { data } = await axios.post(`${API_BASE}${config.endpoint}`, config.body);
       const tasks = data.tasks || [];
 
       const name = PLATFORMS.find((p) => p.key === platform)?.name || "";
       setBoardName(data.board_name ? `${name} · ${data.board_name}` : name);
 
       // One vectorized scan instead of O(n^2) /check round-trips.
-      const { data: scan } = await axios.post(`${API}/scan`, {
+      const { data: scan } = await axios.post(`${API_BASE}/scan`, {
         tasks,
         threshold: THRESHOLD,
       });
@@ -442,7 +442,7 @@ function ConnectBoard() {
       prev.map((p) => (p.id === pair.id ? { ...p, pending: true } : p))
     );
     try {
-      await axios.post(`${API}/feedback`, {
+      await axios.post(`${API_BASE}/feedback`, {
         task_a: pair.taskA,
         task_b: pair.taskB,
         label,
@@ -795,7 +795,7 @@ function errorMessage(err) {
       ? `Error: ${detail}`
       : `Request failed (${err.response.status}).`;
   }
-  return "Could not reach the backend. Is it running on http://localhost:8000?";
+  return `Could not reach the backend. Is it running on ${API_BASE}?`;
 }
 
 export default App;
