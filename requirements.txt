@@ -3,6 +3,7 @@ uvicorn[standard]
 scikit-learn
 joblib
 numpy
+pandas
 requests
 python-dotenv
 pydantic
