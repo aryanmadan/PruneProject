@@ -7,36 +7,36 @@ Endpoints:
   POST /feedback — log a confirmed/dismissed label to data/feedback.csv
 
 Loads at import:
-  data/best_model.pkl (joblib) — the small LogisticRegression classifier
+  data/best_model.pkl (joblib) — trained LogisticRegression classifier
+  sentence-transformers/all-MiniLM-L6-v2 — local embedding model
 
-Embeddings come from the Hugging Face Inference API (set HF_API_TOKEN), so
-there is no local PyTorch / sentence-transformers model to load.
-
-Run:  uvicorn api:app --port 8000   (or: python api.py)
+Run:  uvicorn backend.api:app --port 8000   (from the repo root)
 """
 
 import base64
 import csv
 import os
+import sys
 
 import numpy as np
 import joblib
 import requests
-from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
+from sentence_transformers import SentenceTransformer
+
+# Make sibling modules importable whether the app is launched as
+# `uvicorn backend.api:app` (repo root) or `uvicorn api:app` (from backend/).
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from data_pipeline import clean_post
 from feature_engineering import jaccard_similarity
 
-load_dotenv()
-
-MODEL_PATH = "data/best_model.pkl"
-FEEDBACK_PATH = "data/feedback.csv"
-
-HF_API_TOKEN = os.getenv("HF_API_TOKEN")
-HF_API_URL = "https://api-inference.huggingface.co/pipeline/feature-extraction/sentence-transformers/all-MiniLM-L6-v2"
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+MODEL_PATH = os.path.join(BASE_DIR, "data", "best_model.pkl")
+FEEDBACK_PATH = os.path.join(BASE_DIR, "data", "feedback.csv")
+EMBEDDER_NAME = "sentence-transformers/all-MiniLM-L6-v2"
 
 app = FastAPI(title="Prune API")
 
@@ -48,21 +48,9 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# The duplicate classifier is tiny (LogisticRegression) and loads instantly at
-# import. Embeddings are fetched from the Hugging Face Inference API instead of
-# a local sentence-transformers model, so the backend stays well under 512MB.
+# Load the classifier and the local sentence-transformers embedder once at startup.
 model = joblib.load(MODEL_PATH)
-
-
-def get_embeddings(texts: list[str]) -> np.ndarray:
-    headers = {"Authorization": f"Bearer {HF_API_TOKEN}"}
-    response = requests.post(
-        HF_API_URL,
-        headers=headers,
-        json={"inputs": texts, "options": {"wait_for_model": True}},
-    )
-    response.raise_for_status()
-    return np.array(response.json())
+embedder = SentenceTransformer(EMBEDDER_NAME)
 
 
 # --- Request models ---------------------------------------------------------
@@ -112,7 +100,7 @@ def compute_features(text_a: str, text_b: str):
     clean_a = clean_post(text_a)
     clean_b = clean_post(text_b)
 
-    emb_a, emb_b = get_embeddings([clean_a, clean_b])
+    emb_a, emb_b = embedder.encode([clean_a, clean_b], convert_to_numpy=True)
 
     cos_sim = float(
         np.dot(emb_a, emb_b)
@@ -172,7 +160,7 @@ def scan(req: ScanRequest):
 
     cleaned = [clean_post(t.name) for t in tasks]
 
-    embeddings = get_embeddings(cleaned)
+    embeddings = embedder.encode(cleaned, convert_to_numpy=True)
     norms = np.linalg.norm(embeddings, axis=1, keepdims=True)
     norms[norms == 0] = 1e-10
     unit = embeddings / norms
