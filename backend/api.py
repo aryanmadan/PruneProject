@@ -42,7 +42,10 @@ app = FastAPI(title="Prune API")
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=[
+        "*",
+        "https://pruneproject-production.up.railway.app",
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -235,6 +238,13 @@ DEMO_TASKS = [
 @app.get("/demo")
 def demo():
     return {"tasks": DEMO_TASKS}
+
+
+@app.get("/demo/scan")
+def demo_scan():
+    tasks = [ScanTask(id=t["id"], name=t["name"]) for t in DEMO_TASKS]
+    req = ScanRequest(tasks=tasks, threshold=0.60)
+    return scan(req)
 
 
 @app.post("/trello")

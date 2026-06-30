@@ -115,36 +115,17 @@ function TryItOut() {
     setDemoRan(false);
     setDemoLoading(true);
     try {
-      const { data } = await axios.get(`${API_BASE}/demo`);
-      const tasks = data.tasks || [];
-
-      // Every unique pair (i < j) through the classifier.
-      const requests = [];
-      for (let i = 0; i < tasks.length; i++) {
-        for (let j = i + 1; j < tasks.length; j++) {
-          requests.push([tasks[i], tasks[j]]);
-        }
-      }
-
-      const results = await Promise.all(
-        requests.map(([a, b]) =>
-          axios
-            .post(`${API_BASE}/check`, { task_a: a.name, task_b: b.name })
-            .then(({ data }) => ({ a, b, ...data }))
-        )
-      );
-
-      const flagged = results
+      const { data } = await axios.get(`${API_BASE}/demo/scan`);
+      const flagged = (data.pairs || [])
         .filter((r) => r.is_duplicate)
         .map((r) => ({
-          id: `${r.a.id}-${r.b.id}`,
-          taskA: r.a.name,
-          taskB: r.b.name,
+          id: r.id,
+          taskA: r.task_a,
+          taskB: r.task_b,
           similarity: r.similarity,
           pending: false,
         }))
         .sort((x, y) => y.similarity - x.similarity);
-
       setDemoPairs(flagged);
       setDemoRan(true);
     } catch (err) {
