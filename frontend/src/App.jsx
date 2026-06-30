@@ -2,7 +2,7 @@ import { useState } from "react";
 import axios from "axios";
 import "./App.css";
 
-const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:8000";
+const API_BASE = import.meta.env.VITE_API_URL || "https://prune-api-production.up.railway.app";
 const THRESHOLD = 0.75;
 
 // Cycled through by the "Load example" button in TryItOut.
