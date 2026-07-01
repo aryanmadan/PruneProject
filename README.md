@@ -26,23 +26,6 @@ Prune is an ML-powered duplicate task detection system that automatically identi
 - **Frontend** — React + Vite, Space Grotesk font
 - **Integrations** — Trello API, Jira REST API, Asana API
 
-## Project Structure
-
-```
-PruneProject/
-├── backend/
-│   ├── api.py                # FastAPI backend
-│   ├── data_pipeline.py      # Text cleaning
-│   ├── feature_engineering.py
-│   ├── train_classifier.py
-│   └── data/
-│       ├── best_model.pkl    # Trained classifier
-│       └── feedback.csv      # Active learning labels
-├── frontend/
-│   └── src/
-│       └── App.jsx           # React frontend
-```
-
 ## Running locally
 
 **Backend:**
